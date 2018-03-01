@@ -20,7 +20,9 @@ import (
 	goerrors "errors"
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -220,6 +222,19 @@ func (im *realImageGCManager) detectImages(detectTime time.Time) (sets.String, e
 		for _, container := range pod.Containers {
 			glog.V(5).Infof("Pod %s/%s, container %s uses image %s(%s)", pod.Namespace, pod.Name, container.Name, container.Image, container.ImageID)
 			imagesInUse.Insert(container.ImageID)
+		}
+	}
+
+	// Mark all "kubic/" and "slesXY/" prefixed images as in use.
+	for _, image := range images {
+		for _, repo_tag := range image.RepoTags {
+			is_kubic := strings.HasPrefix(repo_tag, "kubic/")
+			is_sles, _ := regexp.MatchString("^sles\\d{2}/", repo_tag)
+			if is_kubic || is_sles {
+				glog.V(5).Infof("Marking image %s (%s) as in use, as it is an internal image", repo_tag, image.ID)
+				imagesInUse.Insert(image.ID)
+				break
+			}
 		}
 	}
 
