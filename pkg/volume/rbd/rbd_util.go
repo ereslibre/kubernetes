@@ -326,8 +326,10 @@ func (util *RBDUtil) AttachDisk(b rbdMounter) error {
 		glog.V(3).Infof("rbd: successfully map image %s/%s to %s", b.Pool, b.Image, devicePath)
 	}
 
+	options := []string{"_netdev"}
+
 	// mount it
-	if err = b.mounter.FormatAndMount(devicePath, globalPDPath, b.fsType, nil); err != nil {
+	if err = b.mounter.FormatAndMount(devicePath, globalPDPath, b.fsType, options); err != nil {
 		err = fmt.Errorf("rbd: failed to mount rbd volume %s [%s] to %s, error %v", devicePath, b.fsType, globalPDPath, err)
 	}
 	glog.V(3).Infof("rbd: successfully mount image %s/%s at %s", b.Pool, b.Image, globalPDPath)
