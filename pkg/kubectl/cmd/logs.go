@@ -22,6 +22,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -76,10 +77,11 @@ const (
 )
 
 type LogsOptions struct {
-	Namespace     string
-	ResourceArg   string
-	AllContainers bool
-	Options       runtime.Object
+	Namespace      string
+	ResourceArg    string
+	AllContainers  bool
+	StreamSelector bool
+	Options        runtime.Object
 
 	Object           runtime.Object
 	GetPodTimeout    time.Duration
@@ -91,8 +93,9 @@ type LogsOptions struct {
 
 func NewLogsOptions(streams genericclioptions.IOStreams, allContainers bool) *LogsOptions {
 	return &LogsOptions{
-		IOStreams:     streams,
-		AllContainers: allContainers,
+		IOStreams:      streams,
+		AllContainers:  allContainers,
+		StreamSelector: false,
 	}
 }
 
@@ -197,7 +200,7 @@ func (o *LogsOptions) Complete(f cmdutil.Factory, cmd *cobra.Command, args []str
 
 	if len(selector) != 0 {
 		if logOptions.Follow {
-			return cmdutil.UsageErrorf(cmd, "only one of follow (-f) or selector (-l) is allowed")
+			o.StreamSelector = true
 		}
 		if logOptions.TailLines == nil && tail != -1 {
 			logOptions.TailLines = &selectorTail
@@ -247,11 +250,23 @@ func (o LogsOptions) Validate() error {
 func (o LogsOptions) RunLogs() error {
 	switch t := o.Object.(type) {
 	case *api.PodList:
+		var wg sync.WaitGroup
+		if o.StreamSelector {
+			wg.Add(len(t.Items))
+		}
 		for _, p := range t.Items {
-			if err := o.getPodLogs(&p); err != nil {
-				return err
+			if o.StreamSelector {
+				go func() {
+					o.getPodLogs(&p)
+					wg.Done()
+				}()
+			} else {
+				if err := o.getPodLogs(&p); err != nil {
+					return err
+				}
 			}
 		}
+		wg.Wait()
 		return nil
 	case *api.Pod:
 		return o.getPodLogs(t)
