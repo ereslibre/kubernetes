@@ -22,7 +22,7 @@ import (
 	"math"
 	"regexp"
 	"sort"
-	"strings"
+  "strings"
 	"sync"
 	"time"
 
@@ -225,11 +225,11 @@ func (im *realImageGCManager) detectImages(detectTime time.Time) (sets.String, e
 		}
 	}
 
-	// Mark all "kubic/" and "slesXY/" prefixed images as in use.
+	// Mark all "docker.io/kubic/|kubic/" and "docker.io/slesXY/|slesXY/" prefixed images as in use.
 	for _, image := range images {
 		for _, repo_tag := range image.RepoTags {
-			is_kubic := strings.HasPrefix(repo_tag, "kubic/")
-			is_sles, _ := regexp.MatchString("^sles\\d{2}/", repo_tag)
+			is_kubic, _ := regexp.MatchString("^kubic/|^docker.io/kubic/", repo_tag)
+			is_sles, _ := regexp.MatchString("^sles\\d{2}/|^docker.io/sles\\d{2}/", repo_tag)
 			if is_kubic || is_sles {
 				glog.V(5).Infof("Marking image %s (%s) as in use, as it is an internal image", repo_tag, image.ID)
 				imagesInUse.Insert(image.ID)
