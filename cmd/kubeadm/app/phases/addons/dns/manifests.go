@@ -44,6 +44,16 @@ spec:
         k8s-app: kube-dns
     spec:
       priorityClassName: system-cluster-critical
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: k8s-app
+                operator: In
+                values:
+                - kube-dns
+            topologyKey: "kubernetes.io/hostname"
       volumes:
       - name: kube-dns-config
         configMap:
@@ -245,6 +255,16 @@ spec:
         effect: NoSchedule
       nodeSelector:
         beta.kubernetes.io/os: linux
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: k8s-app
+                operator: In
+                values:
+                - kube-dns
+            topologyKey: "kubernetes.io/hostname"
       containers:
       - name: coredns
         image: {{ .Image }}
